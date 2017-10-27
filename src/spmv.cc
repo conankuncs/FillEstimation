@@ -18,13 +18,13 @@ int main(int argc, char* argv[]) {
   Format csr({Dense,Sparse});
   // Declare a new tensor "A" of double-precision floats with dimensions
   // Read Compressed Sparse Fiber Tensor from argv[1] (input file)
-  Tensor<double> A ("A", {3,3}, csr);
-  A.insert({1,1},1);
+ // Tensor<double> A ("A", {3,3}, csr);
+ /* A.insert({1,1},1);
   A.insert({2,1},-2);
   A.insert({2,2},1);
   A.insert({3,1},0.5);
-  A.insert({3,3},1);
-
+  A.insert({3,3},1);*/
+Tensor<double> A = read(argv[1], csr);
   /*
 
   Expected)
