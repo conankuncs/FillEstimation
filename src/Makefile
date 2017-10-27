@@ -10,14 +10,18 @@ all: reference asx oski spmv
 clean:
 	rm -rf reference asx oski *.o *.dSYM *.trace *.pyc
 
+.SUFFIXES: .cc
+
+.cc.o: $(CXX) $(CXXFLAGS) -c -o $@ $<
+
 reference: run_fill.o test_fill.o reference.o util.o
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 asx: run_fill.o test_fill.o asx.o util.o
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 oski: run_fill.o test_fill.o oski.o util.o
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 spmv: run_spmv.o test_spmv.o util.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
