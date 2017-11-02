@@ -76,9 +76,9 @@ int test (size_t m,
   }
   if (clock) {
     printf("  \"time_total\": %.*e,\n", DECIMAL_DIG, time);
-    printf("  \"time_mean\": %.*e%s\n", DECIMAL_DIG, time/trials, 0 ? "," : "");
+    printf("  \"time_mean\": %.*e%s,\n", DECIMAL_DIG, time/trials, 0 ? "," : "");
   }
-  printf("\n}\n");
+  //printf("\n}\n");
 
   free(fill);
   return 0;

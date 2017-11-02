@@ -6,6 +6,7 @@
 #include <iostream>
 #include <string>
 #include "taco.h"
+#include "taco/io/mtx_file_format.h"
 
 using namespace std;
 using namespace taco;
@@ -24,7 +25,8 @@ int main(int argc, char* argv[]) {
   A.insert({2,2},1);
   A.insert({3,1},0.5);
   A.insert({3,3},1);*/
-Tensor<double> A = read(argv[1], csr);
+Tensor<double> A = taco::io::mtx::read(argv[1], csr);
+std::cout << A << std::endl;
   /*
 
   Expected)

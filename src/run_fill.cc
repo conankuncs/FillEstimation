@@ -4,12 +4,15 @@ extern "C" {
 #include <gsl/gsl_spmatrix.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
 #include <sys/stat.h>
 
 static int clock = 1;
 static int results = 0;
 static int verbose = 0;
 static int help = 0;
+
+double wall_time (void);
 
 int test (size_t m,
           size_t n,
@@ -53,7 +56,7 @@ int main (int argc, char **argv) {
   long longarg;
   double doublearg;
   while (1) {
-    static char *options = "B:e:d:t:cCrRvqh";
+    static char *options = (char *)"B:e:d:t:cCrRvqh";
     static struct option long_options[] = {
         {"max-block-size", required_argument, 0, 'B'},
         {"trials",         required_argument, 0, 't'},
@@ -202,13 +205,19 @@ int main (int argc, char **argv) {
     return 1;
   }
 
+  double time = -wall_time();
+  
   gsl_spmatrix *csr = gsl_spmatrix_crs(triples);
+  
+  time += wall_time();
+  
   gsl_spmatrix_free(triples);
 
   //gsl_spmatrix_fprintf(stdout, csr, "%g");
-
+  
   int ret = test(csr->size1, csr->size2, csr->nz, csr->p, csr->i, B, epsilon, delta, trials, clock, results, verbose);
 
+  printf("  \"conversion_time\": %.*e\n}\n", time);
   gsl_spmatrix_free(csr);
 
   return ret;
