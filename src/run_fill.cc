@@ -47,6 +47,7 @@ static void usage () {
 
 int main (int argc, char **argv) {
 
+//  srand(time(NULL));
   size_t B = 12;
   double epsilon = 0.1;
   double delta = 0.01;

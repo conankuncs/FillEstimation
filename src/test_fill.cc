@@ -13,7 +13,7 @@ double wall_time (void) {
   return 1.0*t.tv_sec + 1.0e-6*t.tv_usec;
 }
 
-int estimate_fill (size_t m,
+int estimate_fill_csr (size_t m,
                    size_t n,
                    size_t nnz,
                    const size_t *ptr,
@@ -43,7 +43,7 @@ int test (size_t m,
   }
 
   //Load problem into cache
-  estimate_fill(m, n, nnz, ptr, ind, B, epsilon, delta, fill, verbose);
+  estimate_fill_csr(m, n, nnz, ptr, ind, B, epsilon, delta, fill, verbose);
   for (size_t i = 0; i < B * B; i++) {
     fill[i] = 0;
   }
@@ -52,7 +52,7 @@ int test (size_t m,
   //Benchmark some runs
   double time = -wall_time();
   for (int t = 0; t < trials; t++){
-    estimate_fill(m, n, nnz, ptr, ind, B, epsilon, delta, fill + t * B * B, verbose);
+    estimate_fill_csr(m, n, nnz, ptr, ind, B, epsilon, delta, fill + t * B * B, verbose);
   }
   time += wall_time();
 
