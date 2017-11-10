@@ -113,7 +113,6 @@ int test_coo_2d (size_t m,
     fill[i] = 0;
   }
 
-
   //Benchmark some runs
   double time = -wall_time();
   for (int t = 0; t < trials; t++){

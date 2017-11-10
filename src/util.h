@@ -24,7 +24,7 @@ size_t search_strict (const size_t *stuff, size_t lo, size_t hi, size_t key);
 // TODO: Change name later
 typedef struct coo_2d {
   int x,y;
-  int val;
+  double val;
 } coo_2d;
 
 typedef struct coo_2d_simplified {

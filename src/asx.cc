@@ -220,7 +220,6 @@ int estimate_fill_coo_2d (size_t m,
 #endif
 
   unordered_map<int, vector<coo_2d_simplified>> mp;
-
   // put into hash map
   for (size_t t = 0; t < s; t++) {
     size_t ind = samples[t];
@@ -240,7 +239,6 @@ int estimate_fill_coo_2d (size_t m,
       vec.push_back(tmp);
     }
   }
-
   for (size_t t = 0; t < s; t++) {
     size_t ind = samples[t];
     size_t i = coo[ind].y;
@@ -252,7 +250,6 @@ int estimate_fill_coo_2d (size_t m,
         Z[r][c] = 0;
       }
     }
-
     // nonzeroinrange
 
     size_t i_start = max(i, B-1) - (B-1);
@@ -267,7 +264,9 @@ int estimate_fill_coo_2d (size_t m,
       for (int c = 0; c <=2; c++) {
         int b = r+c; // block number
         // find block in the hash map
+printf("test3: %d\n", b);fflush(stdin);
         unordered_map<int, vector<coo_2d_simplified>>::iterator it = mp.find(b);
+        printf("test4\n");fflush(stdin);
         if(it != mp.end()) {
           vector<coo_2d_simplified> &vec = it->second;
           // iterate through all nnz element in the block if it falls in our range.
@@ -280,7 +279,6 @@ int estimate_fill_coo_2d (size_t m,
         }
       }
     }
-
     for (int r = 1; r < W; r++) {
       for (int c = 1; c < W; c++) {
         Z[r][c] += Z[r][c - 1];

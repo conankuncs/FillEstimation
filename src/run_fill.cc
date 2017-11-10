@@ -222,20 +222,26 @@ int main (int argc, char **argv) {
 
   int ret = test_csr(csr->size1, csr->size2, csr->nz, csr->p, csr->i, B, epsilon, delta, trials, clock, results, verbose);
 
-  printf("  \"conversion_time\": %.*e\n}\n", time);
+  printf("  \"conversion_time\": %.*e\n}\n", DECIMAL_DIG, time);
   gsl_spmatrix_free(csr);
-
   vector<coo_2d> coo;
-
   // TODO: make it compatible with file that has initial annotation %
   f = fopen(argv[optind], "r");
-  coo_2d tmp;
+  if(!f) {
+    printf("Error: Failed to read %s\n", argv[optind]);
+    return 1;
+  }
+
   int m,n,nnz;
-  fscanf(f,"%d%d%d",&m,&n,&nnz);
-  while(fscanf(f,"%d%d%d",&tmp.y, &tmp.x, &tmp.val) != EOF) {
+  fscanf(f,"%d %d %d",&m,&n,&nnz);
+
+  for(int i = 0; i < nnz; i++) {
+    coo_2d tmp={0};
+    fscanf(f,"%d %d %lf\n",&tmp.y, &tmp.x, &tmp.val);
     coo.push_back(tmp);
   }
   fclose(f);
+
   ret = test_coo_2d(m, n, nnz, coo, B, epsilon, delta, trials, clock, results, verbose);
 
   printf("}\n");
