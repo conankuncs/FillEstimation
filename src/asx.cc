@@ -230,6 +230,7 @@ int estimate_fill_coo_2d (size_t m,
 
   unordered_map<int, vector<coo_2d_simplified>> mp;
 
+  // put into hash map
   for (size_t t = 0; t < s; t++) {
     size_t ind = samples[i];
     size_t i = coo[ind].y;
@@ -274,9 +275,11 @@ int estimate_fill_coo_2d (size_t m,
     for (int r = start_block; r <= start_block + 2*num_block_per_row; r += num_block_per_row) {
       for (int c = 0; c <=2; c++) {
         int b = r+c; // block number
+        // find block in the hash map
         unordered_map<int, vector<coo_2d_simplified>>::iterator it = mp.find(b);
         if(it != mp.end()) {
           vector<coo_2d_simplified> &vec = it->second;
+          // iterate through all nnz element in the block if it falls in our range.
           for(int k = 0; k < vec.size(); k++) {
             if(j_start <= vec[k].x  && vec[k].x <= j_end && i_start <= vec[k].y && i_end <= vec[k].y) {
               // If an element in the block is inside I-B+1 ~ I + B -1, count it
