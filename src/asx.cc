@@ -1,14 +1,16 @@
-extern "C" {
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unordered_map>
 #include <vector>
-#include "util.h"
 
 #define hash_key(i,j,B,m) (1 + m/B + (m % B == 0 ? 0 : 1) * (i/B - (i%B == 0 ? 1 : 0)) + j/B - (j%B == 0 ? 1 : 0))
 
 using namespace std;
+
+extern "C" {
+
+#include "util.h"
 
 char *name () {
   return (char *)"asx";
@@ -232,7 +234,7 @@ int estimate_fill_coo_2d (size_t m,
 
   // put into hash map
   for (size_t t = 0; t < s; t++) {
-    size_t ind = samples[i];
+    size_t ind = samples[t];
     size_t i = coo[ind].y;
     size_t j = coo[ind].x;
     coo_2d_simplified tmp;
@@ -251,7 +253,7 @@ int estimate_fill_coo_2d (size_t m,
   }
 
   for (size_t t = 0; t < s; t++) {
-    size_t ind = samples[i];
+    size_t ind = samples[t];
     size_t i = coo[ind].y;
     size_t j = coo[ind].x;
 
