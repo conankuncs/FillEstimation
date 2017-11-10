@@ -2,7 +2,13 @@ extern "C" {
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unordered_map>
+#include <vector>
 #include "util.h"
+
+#define hash_key(i,j,B,m) (1 + m/B + (m % B == 0 ? 0 : 1) * (i/B - (i%B == 0 ? 1 : 0)) + j/B - (j%B == 0 ? 1 : 0))
+
+using namespace std;
 
 char *name () {
   return (char *)"asx";
@@ -55,7 +61,7 @@ int estimate_fill_csr (size_t m,
                    double epsilon,
                    double delta,
                    double *fill,
-                   int verbose){
+                   int verbose) {
   size_t W = 2 * B;
   int Z[W][W];
 
@@ -167,4 +173,159 @@ int estimate_fill_csr (size_t m,
   free(samples_j);
   return 0;
 }
+
+
+// TODO: Change name later
+typedef struct coo_2d {
+  int x,y;
+  int nnz;
+} coo_2d;
+
+typedef struct coo_2d_simplified {
+  int x,y;
+} coo_2d_simplified;
+
+int estimate_fill_coo_2d (size_t m,
+                   size_t n,
+                   size_t nnz,
+                   vector<coo_2d> coo,
+                   size_t B,
+                   double epsilon,
+                   double delta,
+                   double *fill,
+                   int verbose) {
+  size_t W = 2 * B;
+  int Z[W][W];
+
+  double T = 2 * log(B/delta) * B * B / (epsilon * epsilon);
+  size_t s;
+
+#ifdef REPLACEMENT
+  s = T;
+#else
+  //s = ((T - T/nnz) + sqrt((T - T / nnz) * (T - T / nnz)  + 4 * T * (1 + T / N)))/(2 + 2 * T / nnz);
+  s = ((T - T/nnz) + sqrt(T * (T + (2 * T + T / nnz) / nnz + 4)))/(2 + 2 * T / nnz);
+#endif
+  s = min(s, nnz);
+
+  //Sample s items
+  size_t *samples = (size_t*)malloc(s*sizeof(size_t));
+  size_t *samples_i = (size_t*)malloc(s*sizeof(size_t));
+  size_t *samples_j = (size_t*)malloc(s*sizeof(size_t));
+
+// Randomized Sampling
+#ifdef REPLACEMENT
+  if (s == nnz) {
+    for (size_t i = 0; i < nnz; i++) {
+      samples[i] = i;
+    }
+  } else {
+    for (size_t i = 0; i < s; i++) {
+      samples[i] = random_range(0, nnz);
+    }
+  }
+#else
+  random_choose(samples, s, 0, nnz);
+#endif
+
+  unordered_map<int, vector<coo_2d_simplified>> mp;
+
+  for (size_t t = 0; t < s; t++) {
+    size_t ind = samples[i];
+    size_t i = coo[ind].y;
+    size_t j = coo[ind].x;
+    coo_2d_simplified tmp;
+    tmp.y = i;
+    tmp.x = j;
+    int key = hash_key(i,j,B,m);
+    unordered_map<int, vector<coo_2d_simplified>>::iterator it = mp.find(key);
+    if(it == mp.end()) {
+      // if not exist, put empty vector
+      mp.insert(make_pair(key, vector<coo_2d_simplified>()));
+    } else {
+      // put sample inside.
+      vector<coo_2d_simplified> &vec = it->second;
+      vec.push_back(tmp);
+    }
+  }
+
+  for (size_t t = 0; t < s; t++) {
+    size_t ind = samples[i];
+    size_t i = coo[ind].y;
+    size_t j = coo[ind].x;
+
+    //compute x for some i, j
+    for (int r = 0; r < W; r++) {
+      for (int c = 0; c < W; c++) {
+        Z[r][c] = 0;
+      }
+    }
+
+    // nonzeroinrange
+
+    size_t i_start = max(i, B-1) - (B-1);
+    size_t i_end = min(i+B-1, m-1);
+
+    size_t j_start = max(j, B-1) - (B-1);
+    size_t j_end = min(i+B-1, n-1);
+
+    size_t start_block = hash_key(i,j,B,m);
+    size_t num_block_per_row = m/B + (m % B == 0 ? 0 : 1);
+    for (int r = start_block; r <= start_block + 2*num_block_per_row; r += num_block_per_row) {
+      for (int c = 0; c <=2; c++) {
+        int b = r+c; // block number
+        unordered_map<int, vector<coo_2d_simplified>>::iterator it = mp.find(b);
+        if(it != mp.end()) {
+          vector<coo_2d_simplified> &vec = it->second;
+          for(int k = 0; k < vec.size(); k++) {
+            if(j_start <= vec[k].x  && vec[k].x <= j_end && i_start <= vec[k].y && i_end <= vec[k].y) {
+              // If an element in the block is inside I-B+1 ~ I + B -1, count it
+              Z[vec[k].y-i_start][vec[k].x-j_start] = 1;
+            }
+          }
+        }
+      }
+    }
+
+    for (int r = 1; r < W; r++) {
+      for (int c = 1; c < W; c++) {
+        Z[r][c] += Z[r][c - 1];
+      }
+    }
+
+    for (int r = 1; r < W; r++) {
+      for (int c = 1; c < W; c++) {
+        Z[r][c] += Z[r - 1][c];
+      }
+    }
+
+    int fill_index = 0;
+    for (int b_r = 1; b_r <= B; b_r++) {
+      int r_hi = B + b_r - 1 - (i % b_r);
+      int r_lo = r_hi - b_r;
+      for (int b_c = 1; b_c <= B; b_c++) {
+        int c_hi = B + b_c - 1 - (j % b_c);
+        int c_lo = c_hi - b_c;
+        int y_0 = Z[r_hi][c_hi] - Z[r_lo][c_hi] - Z[r_hi][c_lo] + Z[r_lo][c_lo];
+        fill[fill_index] += 1.0/y_0;
+        fill_index++;
+      }
+    }
+
+  }
+
+  int fill_index = 0;
+  for (int b_r = 1; b_r <= B; b_r++) {
+    for (int b_c = 1; b_c <= B; b_c++) {
+      fill[fill_index] *= b_r * b_c / (double)s;
+      fill_index++;
+    }
+  }
+
+  free(samples);
+  free(samples_i);
+  free(samples_j);
+  return 0;
+}
+
 }
