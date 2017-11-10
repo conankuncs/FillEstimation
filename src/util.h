@@ -20,3 +20,13 @@ void random_choose (size_t *samples, size_t n, size_t lo, size_t hi);
 void sort (size_t *stuff, size_t n);
 size_t search (const size_t *stuff, size_t lo, size_t hi, size_t key);
 size_t search_strict (const size_t *stuff, size_t lo, size_t hi, size_t key);
+
+// TODO: Change name later
+typedef struct coo_2d {
+  int x,y;
+  int val;
+} coo_2d;
+
+typedef struct coo_2d_simplified {
+  int x,y;
+} coo_2d_simplified;

@@ -1,3 +1,6 @@
+#include <vector>
+using namespace std;
+
 extern "C" {
 #include <errno.h>
 #include <getopt.h>
@@ -6,6 +9,7 @@ extern "C" {
 #include <stdlib.h>
 #include <sys/time.h>
 #include <sys/stat.h>
+#include "util.h"
 
 static int clock = 1;
 static int results = 0;
@@ -14,7 +18,7 @@ static int help = 0;
 
 double wall_time (void);
 
-int test (size_t m,
+int test_csr (size_t m,
           size_t n,
           size_t nnz,
           const size_t *ptr,
@@ -26,7 +30,7 @@ int test (size_t m,
           int clock,
           int results,
           int verbose);
-
+int test_coo_2d (size_t m, size_t n, size_t nnz, vector<coo_2d> &coo, size_t B, double epsilon, double delta, int trials, int clock, int results,  int verbose);
 char *name ();
 
 static void usage () {
@@ -207,19 +211,34 @@ int main (int argc, char **argv) {
   }
 
   double time = -wall_time();
-  
+
   gsl_spmatrix *csr = gsl_spmatrix_crs(triples);
-  
+
   time += wall_time();
-  
+
   gsl_spmatrix_free(triples);
 
   //gsl_spmatrix_fprintf(stdout, csr, "%g");
-  
-  int ret = test(csr->size1, csr->size2, csr->nz, csr->p, csr->i, B, epsilon, delta, trials, clock, results, verbose);
+
+  int ret = test_csr(csr->size1, csr->size2, csr->nz, csr->p, csr->i, B, epsilon, delta, trials, clock, results, verbose);
 
   printf("  \"conversion_time\": %.*e\n}\n", time);
   gsl_spmatrix_free(csr);
+
+  vector<coo_2d> coo;
+
+  // TODO: make it compatible with file that has initial annotation %
+  f = fopen(argv[optind], "r");
+  coo_2d tmp;
+  int m,n,nnz;
+  fscanf(f,"%d%d%d",&m,&n,&nnz);
+  while(fscanf(f,"%d%d%d",&tmp.y, &tmp.x, &tmp.val) != EOF) {
+    coo.push_back(tmp);
+  }
+  fclose(f);
+  ret = test_coo_2d(m, n, nnz, coo, B, epsilon, delta, trials, clock, results, verbose);
+
+  printf("}\n");
 
   return ret;
 }

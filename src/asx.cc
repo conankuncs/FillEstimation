@@ -176,21 +176,10 @@ int estimate_fill_csr (size_t m,
   return 0;
 }
 
-
-// TODO: Change name later
-typedef struct coo_2d {
-  int x,y;
-  int nnz;
-} coo_2d;
-
-typedef struct coo_2d_simplified {
-  int x,y;
-} coo_2d_simplified;
-
 int estimate_fill_coo_2d (size_t m,
                    size_t n,
                    size_t nnz,
-                   vector<coo_2d> coo,
+                   vector<coo_2d> &coo,
                    size_t B,
                    double epsilon,
                    double delta,
