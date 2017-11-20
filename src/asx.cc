@@ -256,18 +256,19 @@ int estimate_fill_coo_2d (size_t m,
     size_t i_end = min(i+B-1, m-1);
 
     size_t j_start = max(j, B-1) - (B-1);
-    size_t j_end = min(i+B-1, n-1);
+    size_t j_end = min(j+B-1, n-1);
 
     size_t start_block = hash_key(i,j,B,m);
-    size_t num_block_per_row = m/B + (m % B == 0 ? 0 : 1);
+    size_t num_block_per_row = n/B + (n % B == 0 ? 0 : 1);
     for (int r = start_block; r <= start_block + 2*num_block_per_row; r += num_block_per_row) {
       for (int c = 0; c <=2; c++) {
         int b = r+c; // block number
         // find block in the hash map
-printf("test3: %d\n", b);fflush(stdin);
+        //printf("test3: %d %d %d-- %d %d\n", i,j, B, r,c);fflush(stdout);
         unordered_map<int, vector<coo_2d_simplified>>::iterator it = mp.find(b);
-        printf("test4\n");fflush(stdin);
+        //printf("test4 0x%x 0x%x\n", it, mp.end());fflush(stdout);
         if(it != mp.end()) {
+
           vector<coo_2d_simplified> &vec = it->second;
           // iterate through all nnz element in the block if it falls in our range.
           for(int k = 0; k < vec.size(); k++) {
