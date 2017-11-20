@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <vector>
 
-#define hash_key(i,j,B,m) (1 + n/B + (n % B == 0 ? 0 : 1) * (i-1)/B + (j-1)/B)
+#define hash_key(i,j,B,m) (1 + (n/B + (n % B == 0 ? 0 : 1)) * (i-1)/B + (j-1)/B)
 
 using namespace std;
 
