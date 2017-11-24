@@ -4,7 +4,13 @@
 #include <unordered_map>
 #include <vector>
 
-#define hash_key(i,j,B,m) (1 + (n/B + (n % B == 0 ? 0 : 1)) * (i-1)/B + (j-1)/B)
+static inline size_t hash_key(size_t ip,size_t jp,size_t Bp, size_t np) {
+  int n = np;
+  double B = Bp;
+  int i = ip;
+  int j = jp;
+  return (1 + ((int)(n/B) + (n % (int)B == 0 ? 0 : 1)) * (int)((i-1)/B) + (int)((j-1)/B));
+}
 
 using namespace std;
 
@@ -132,6 +138,7 @@ int estimate_fill_csr (size_t m,
       while (scan < ptr[ii + 1] && (jj = ind[scan]) <= jj_max) {
         int c = (B + jj) - j;
         Z[r][c] = 1;
+        if(t==1) printf("+");
         scan++;
       }
     }
@@ -185,11 +192,11 @@ int estimate_fill_coo_2d (size_t m,
                    double delta,
                    double *fill,
                    int verbose) {
-  size_t W = 2 * B;
+  int W = 2 * B;
   int Z[W][W];
 
   double T = 2 * log(B/delta) * B * B / (epsilon * epsilon);
-  size_t s;
+  int s;
 
 #ifdef REPLACEMENT
   s = T;
@@ -207,42 +214,47 @@ int estimate_fill_coo_2d (size_t m,
 // Randomized Sampling
 #ifdef REPLACEMENT
   if (s == nnz) {
-    for (size_t i = 0; i < nnz; i++) {
+    for (int i = 0; i < nnz; i++) {
       samples[i] = i;
     }
   } else {
-    for (size_t i = 0; i < s; i++) {
+    for (int i = 0; i < s; i++) {
       samples[i] = random_range(0, nnz);
     }
   }
 #else
   random_choose(samples, s, 0, nnz);
 #endif
-
+  sort(samples, s);
   unordered_map<int, vector<coo_2d_simplified>> mp;
   // put into hash map
-  for (size_t t = 0; t < s; t++) {
-    size_t ind = samples[t];
-    size_t i = coo[ind].y;
-    size_t j = coo[ind].x;
+  for (int t = 0; t < s; t++) {
+    int ind = samples[t];
+    int i = coo[ind].y;
+    int j = coo[ind].x;
     coo_2d_simplified tmp;
     tmp.y = i;
     tmp.x = j;
-    int key = hash_key(i,j,B,m);
+    int key = hash_key(i,j,B,n);
     unordered_map<int, vector<coo_2d_simplified>>::iterator it = mp.find(key);
     if(it == mp.end()) {
       // if not exist, put empty vector
       mp.insert(make_pair(key, vector<coo_2d_simplified>()));
+
+      // insert
+      it = mp.find(key);
+      vector<coo_2d_simplified> &vec = it->second;
+      vec.push_back(tmp);
     } else {
       // put sample inside.
       vector<coo_2d_simplified> &vec = it->second;
       vec.push_back(tmp);
     }
   }
-  for (size_t t = 0; t < s; t++) {
-    size_t ind = samples[t];
-    size_t i = coo[ind].y;
-    size_t j = coo[ind].x;
+  for (int t = 0; t < s; t++) {
+    int ind = samples[t];
+    int i = coo[ind].y;
+    int j = coo[ind].x;
 
     //compute x for some i, j
     for (int r = 0; r < W; r++) {
@@ -252,34 +264,48 @@ int estimate_fill_coo_2d (size_t m,
     }
     // nonzeroinrange
 
-    size_t i_start = max(i, B-1) - (B-1);
-    size_t i_end = min(i+B-1, m-1);
+    int i_start = max(i, B-1) - (B-1);
+    int i_end = min(i+B-1, m-1);
 
-    size_t j_start = max(j, B-1) - (B-1);
-    size_t j_end = min(j+B-1, n-1);
+    int j_start = max(j, B-1) - (B-1);
+    int j_end = min(j+B-1, n-1);
 
-    size_t start_block = hash_key(i,j,B,m);
-    size_t num_block_per_row = n/B + (n % B == 0 ? 0 : 1);
-    for (int r = start_block; r <= start_block + 2*num_block_per_row; r += num_block_per_row) {
-      for (int c = 0; c <=2; c++) {
+    int start_block = hash_key(i,j,B,n);
+    int num_block_per_row = n/B + (n % B == 0 ? 0 : 1);
+    for (int r = start_block-num_block_per_row; r <= start_block + num_block_per_row; r += num_block_per_row) {
+      for (int c = -1; c <=1; c++) {
         int b = r+c; // block number
+        if(b < 0) continue;
         // find block in the hash map
         //printf("test3: %d %d %d-- %d %d\n", i,j, B, r,c);fflush(stdout);
         unordered_map<int, vector<coo_2d_simplified>>::iterator it = mp.find(b);
         //printf("test4 0x%x 0x%x\n", it, mp.end());fflush(stdout);
+        //printf("range: (%d,%d) / %d ~ %d , %d ~ %d\n",i,j, i_start, i_end, j_start, j_end);
         if(it != mp.end()) {
 
           vector<coo_2d_simplified> &vec = it->second;
+
           // iterate through all nnz element in the block if it falls in our range.
           for(int k = 0; k < vec.size(); k++) {
-            if(j_start <= vec[k].x  && vec[k].x <= j_end && i_start <= vec[k].y && i_end <= vec[k].y) {
+            if(j_start <= vec[k].x  && vec[k].x <= j_end && i_start <= vec[k].y && vec[k].y <= i_end) {
               // If an element in the block is inside I-B+1 ~ I + B -1, count it
+              //printf("%d %d (%d~%d, %d~%d) => %d %d\n", vec[k].y, vec[k].x, i_start, i_end,j_start, j_end,vec[k].y-i_start, vec[k].x-j_start);fflush(stdout);
               Z[vec[k].y-i_start][vec[k].x-j_start] = 1;
+              if(t==1) printf("+");
             }
           }
         }
       }
     }
+    /*
+    if(t==1)
+    for (int r = 1; r < W; r++) {
+      for (int c = 1; c < W; c++) {
+        printf("%d ", Z[r][c]);
+      }
+      printf("\n");
+    }*/
+
     for (int r = 1; r < W; r++) {
       for (int c = 1; c < W; c++) {
         Z[r][c] += Z[r][c - 1];
@@ -291,7 +317,6 @@ int estimate_fill_coo_2d (size_t m,
         Z[r][c] += Z[r - 1][c];
       }
     }
-
     int fill_index = 0;
     for (int b_r = 1; b_r <= B; b_r++) {
       int r_hi = B + b_r - 1 - (i % b_r);
@@ -300,6 +325,7 @@ int estimate_fill_coo_2d (size_t m,
         int c_hi = B + b_c - 1 - (j % b_c);
         int c_lo = c_hi - b_c;
         int y_0 = Z[r_hi][c_hi] - Z[r_lo][c_hi] - Z[r_hi][c_lo] + Z[r_lo][c_lo];
+
         fill[fill_index] += 1.0/y_0;
         fill_index++;
       }
