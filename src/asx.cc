@@ -138,6 +138,7 @@ int estimate_fill_csr (size_t m,
       while (scan < ptr[ii + 1] && (jj = ind[scan]) <= jj_max) {
         int c = (B + jj) - j;
         Z[r][c] = 1;
+        //printf("%d %d\n", r, c);
         //if(t==1) printf("+");
         scan++;
       }
@@ -155,7 +156,7 @@ int estimate_fill_csr (size_t m,
       }
     }
 
-    /*printf("after:\n");
+    /*printf("after (%d,%d):\n",i,j);
     for (int r = 1; r < W; r++) {
       for (int c = 1; c < W; c++) {
         printf("%d ", Z[r][c]);
@@ -196,7 +197,7 @@ int estimate_fill_coo_2d (size_t m,
                    size_t n,
                    size_t nnz,
                    vector<coo_2d> &coo,
-                   size_t B,
+                   int B,
                    double epsilon,
                    double delta,
                    double *fill,
@@ -284,12 +285,14 @@ int estimate_fill_coo_2d (size_t m,
     }
     // nonzeroinrange
 
-    int i_start = max(i, B-1) - (B-1);
-    int i_end = min(i+B-1, m);
-
-    int j_start = max(j, B-1) - (B-1);
-    int j_end = min(j+B-1, n);
-
+    //int i_start = (i-B) > 1 ? i - B : 1;
+    //int i_end = (i+B-1) < m ? i+B-1 : m;
+    int i_start = i-B;
+    int i_end = i+B - 1;
+    // int j_start = (j-B) > 1 ? j-B : 1;
+    // int j_end = (j+B-1) < n ? j+B-1 : n;
+    int j_start = j-B;
+    int j_end = j+B-1;
     int start_block = hash_key(i,j,B,n);
     int num_block_per_row = n/B + (n % B == 0 ? 0 : 1);
 
@@ -300,7 +303,7 @@ int estimate_fill_coo_2d (size_t m,
       }
       printf("\n");
     }*/
-
+    //printf("(%d:%d, %d:%d)\n", i_start, i_end, j_start, j_end);
     for (int r = start_block-num_block_per_row; r <= start_block + num_block_per_row; r += num_block_per_row) {
       for (int c = -1; c <=1; c++) {
         int b = r+c; // block number
@@ -308,7 +311,7 @@ int estimate_fill_coo_2d (size_t m,
         // find block in the hash map
         //printf("test3: %d %d %d-- %d %d\n", i,j, B, r,c);fflush(stdout);
         unordered_map<int, vector<coo_2d_simplified>>::iterator it = mp.find(b);
-        //printf("test4 0x%x 0x%x\n", it, mp.end());fflush(stdout);
+        //printf("test4 0x%x 0x%x\n", it, mp.end());fflush(stdout);*
         //printf("range: (%d,%d) / %d ~ %d , %d ~ %d\n",i,j, i_start, i_end, j_start, j_end);
         if(it != mp.end()) {
 
@@ -327,7 +330,8 @@ int estimate_fill_coo_2d (size_t m,
             if(j_start <= vec[k].x  && vec[k].x <= j_end && i_start <= vec[k].y && vec[k].y <= i_end) {
               // If an element in the block is inside I-B+1 ~ I + B -1, count it
               //printf("%d %d (%d~%d, %d~%d) => %d %d\n", vec[k].y, vec[k].x, i_start, i_end,j_start, j_end,vec[k].y-i_start, vec[k].x-j_start);fflush(stdout);
-              Z[vec[k].y-i_start+1][vec[k].x-j_start+1] = 1;
+              Z[vec[k].y-i_start][vec[k].x-j_start] = 1;
+              //printf("%d %d (%d)\n", vec[k].y-i_start+1, vec[k].x-j_start+1, b);
               //printf(" (%d %d)", vec[k].y-i_start+1, vec[k].x-j_start+1);
               //printf(" --counted");
               //if(t==1) printf("+");
@@ -350,7 +354,7 @@ int estimate_fill_coo_2d (size_t m,
         Z[r][c] += Z[r - 1][c];
       }
     }
-    /*printf("after:\n");
+    /*printf("after (%d,%d):\n", i, j);
     for (int r = 1; r < W; r++) {
       for (int c = 1; c < W; c++) {
         printf("%d ", Z[r][c]);
@@ -358,6 +362,7 @@ int estimate_fill_coo_2d (size_t m,
       printf("\n");
     }*/
 
+    i--;j--;
 
     int fill_index = 0;
     for (int b_r = 1; b_r <= B; b_r++) {
