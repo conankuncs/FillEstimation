@@ -4,11 +4,7 @@
 #include <unordered_map>
 #include <vector>
 
-static inline size_t hash_key(size_t ip,size_t jp,size_t Bp, size_t np) {
-  int n = np;
-  double B = Bp;
-  int i = ip;
-  int j = jp;
+static inline int hash_key(int i,int j,int B, int n) {
   return (1 + ((int)(n/B) + (n % (int)B == 0 ? 0 : 1)) * (int)((i-1)/B) + (int)((j-1)/B));
 }
 
@@ -116,6 +112,8 @@ int estimate_fill_csr (size_t m,
     }
   }
 
+  //printf("Samples: %d (%d)\n", s, nnz);
+
   for (size_t t = 0; t < s; t++) {
     size_t i = samples_i[t];
     size_t j = samples_j[t];
@@ -139,7 +137,7 @@ int estimate_fill_csr (size_t m,
         int c = (B + jj) - j;
         Z[r][c] = 1;
         //printf("%d %d\n", r, c);
-        //if(t==1) printf("+");
+        //if(t==9) printf("+");
         scan++;
       }
     }
@@ -156,13 +154,14 @@ int estimate_fill_csr (size_t m,
       }
     }
 
-    /*printf("after (%d,%d):\n",i,j);
+    if(t==9)
+    {printf("after (%d,%d):\n", i, j);
     for (int r = 1; r < W; r++) {
       for (int c = 1; c < W; c++) {
         printf("%d ", Z[r][c]);
       }
       printf("\n");
-    }*/
+    }}
 
     int fill_index = 0;
     for (int b_r = 1; b_r <= B; b_r++) {
@@ -193,9 +192,9 @@ int estimate_fill_csr (size_t m,
   return 0;
 }
 
-int estimate_fill_coo_2d (size_t m,
-                   size_t n,
-                   size_t nnz,
+int estimate_fill_coo_2d (int m,
+                   int n,
+                   int nnz,
                    vector<coo_2d> &coo,
                    int B,
                    double epsilon,
@@ -217,9 +216,9 @@ int estimate_fill_coo_2d (size_t m,
   s = min(s, nnz);
 
   //Sample s items
-  size_t *samples = (size_t*)malloc(s*sizeof(size_t));
-  size_t *samples_i = (size_t*)malloc(s*sizeof(size_t));
-  size_t *samples_j = (size_t*)malloc(s*sizeof(size_t));
+  int *samples = (int*)malloc(s*sizeof(int));
+  int *samples_i = (int*)malloc(s*sizeof(int));
+  int *samples_j = (int*)malloc(s*sizeof(int));
 
 // Randomized Sampling
 #ifdef REPLACEMENT
@@ -235,7 +234,7 @@ int estimate_fill_coo_2d (size_t m,
 #else
   random_choose(samples, s, 0, nnz);
 #endif
-  sort(samples, s);
+  sort_int(samples, s);
   unordered_map<int, vector<coo_2d_simplified>> mp;
   // put into hash map
   for (int t = 0; t < s; t++) {
@@ -250,28 +249,22 @@ int estimate_fill_coo_2d (size_t m,
     unordered_map<int, vector<coo_2d_simplified>>::iterator it = mp.find(key);
     if(it == mp.end()) {
       // if not exist, put empty vector
-      mp.insert(make_pair(key, vector<coo_2d_simplified>()));
+      vector<coo_2d_simplified> vec = {tmp};
+      mp.insert(make_pair(key, vec));
 
       // insert
-      it = mp.find(key);
+    /* it = mp.find(key);
       vector<coo_2d_simplified> &vec = it->second;
-      vec.push_back(tmp);
+      vec.push_back(tmp);*/
     } else {
       // put sample inside.
       vector<coo_2d_simplified> &vec = it->second;
       vec.push_back(tmp);
     }
-
-    //printf("%d %d => (%d)\n", i,j, key);
-    for(auto itr = mp.begin(); itr != mp.end(); itr++) {
-      vector<coo_2d_simplified> &vec = itr->second;
-      /*printf("%d: ", itr->first);
-      for(int k = 0; k < vec.size(); k++) {
-        printf("(%d %d) ", vec[k].y, vec[k].x);
-      }
-      printf("\n");*/
-    }
   }
+
+  int num_block_per_row = n/B + (n % B == 0 ? 0 : 1);
+  printf("%d\n", n);
   for (int t = 0; t < s; t++) {
     int ind = samples[t];
     int i = coo[ind].y;
@@ -294,7 +287,7 @@ int estimate_fill_coo_2d (size_t m,
     int j_start = j-B;
     int j_end = j+B-1;
     int start_block = hash_key(i,j,B,n);
-    int num_block_per_row = n/B + (n % B == 0 ? 0 : 1);
+    
 
     /*printf("before:\n");
     for (int r = 1; r < W; r++) {
@@ -303,11 +296,11 @@ int estimate_fill_coo_2d (size_t m,
       }
       printf("\n");
     }*/
-    //printf("(%d:%d, %d:%d)\n", i_start, i_end, j_start, j_end);
+
     for (int r = start_block-num_block_per_row; r <= start_block + num_block_per_row; r += num_block_per_row) {
       for (int c = -1; c <=1; c++) {
         int b = r+c; // block number
-        if(b < 0) continue;
+        if(b <= 0) continue;
         // find block in the hash map
         //printf("test3: %d %d %d-- %d %d\n", i,j, B, r,c);fflush(stdout);
         unordered_map<int, vector<coo_2d_simplified>>::iterator it = mp.find(b);
@@ -324,22 +317,29 @@ int estimate_fill_coo_2d (size_t m,
               // If an element in the block is inside I-B+1 ~ I + B -1, count it
               //printf("%d %d (%d~%d, %d~%d) => %d %d\n", vec[k].y, vec[k].x, i_start, i_end,j_start, j_end,vec[k].y-i_start, vec[k].x-j_start);fflush(stdout);
               //Z[vec[k].y-i_start+1][vec[k].x-j_start+1] = 1;
-              //if(t==1) printf("+");
+              //if(t==9) printf("+");
             //}
             //printf("%d %d (%d) / %d~%d, %d~%d ", vec[k].y, vec[k].x, b, i_start, i_end, j_start, j_end);
-            if(j_start <= vec[k].x  && vec[k].x <= j_end && i_start <= vec[k].y && vec[k].y <= i_end) {
+            if(j_start < vec[k].x  && vec[k].x < j_end && i_start < vec[k].y && vec[k].y < i_end) {
               // If an element in the block is inside I-B+1 ~ I + B -1, count it
               //printf("%d %d (%d~%d, %d~%d) => %d %d\n", vec[k].y, vec[k].x, i_start, i_end,j_start, j_end,vec[k].y-i_start, vec[k].x-j_start);fflush(stdout);
+
+              if(vec[k].y-i_start == 0 || vec[k].x-j_start == 0) {
+                printf("Test\n");
+              }
               Z[vec[k].y-i_start][vec[k].x-j_start] = 1;
+
+
               //printf("%d %d (%d)\n", vec[k].y-i_start+1, vec[k].x-j_start+1, b);
-              //printf(" (%d %d)", vec[k].y-i_start+1, vec[k].x-j_start+1);
+              //\printf(" (%d %d)", vec[k].y-i_start+1, vec[k].x-j_start+1);
               //printf(" --counted");
-              //if(t==1) printf("+");
+              //if(t==9) printf("+");
             }
           //  printf("\n");
           }
         }
       }
+      
     }
 
 
@@ -354,15 +354,16 @@ int estimate_fill_coo_2d (size_t m,
         Z[r][c] += Z[r - 1][c];
       }
     }
-    /*printf("after (%d,%d):\n", i, j);
+if(t==9)
+    {printf("after (%d,%d):\n", i, j);
     for (int r = 1; r < W; r++) {
       for (int c = 1; c < W; c++) {
         printf("%d ", Z[r][c]);
       }
       printf("\n");
-    }*/
+    }}
 
-    i--;j--;
+    //i--;j--;
 
     int fill_index = 0;
     for (int b_r = 1; b_r <= B; b_r++) {
@@ -377,6 +378,8 @@ int estimate_fill_coo_2d (size_t m,
         fill_index++;
       }
     }
+
+
 
   }
 

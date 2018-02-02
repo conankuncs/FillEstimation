@@ -18,6 +18,7 @@ size_t random_range (size_t lo, size_t hi);
 double random_uniform ();
 void random_choose (size_t *samples, size_t n, size_t lo, size_t hi);
 void sort (size_t *stuff, size_t n);
+void sort_int (int *stuff, int n);
 size_t search (const size_t *stuff, size_t lo, size_t hi, size_t key);
 size_t search_strict (const size_t *stuff, size_t lo, size_t hi, size_t key);
 

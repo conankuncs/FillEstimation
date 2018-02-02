@@ -96,6 +96,10 @@ void sort (size_t *stuff, size_t n) {
   qsort(stuff, n, sizeof(size_t), size_t_cmp);
 }
 
+void sort_int (int *stuff, int n) {
+  //quicksort(stuff, n);
+  qsort(stuff, n, sizeof(int), size_t_cmp);
+}
 size_t search (const size_t *stuff, size_t lo, size_t hi, size_t key) {
   size_t len = hi - lo;
   size_t half;
