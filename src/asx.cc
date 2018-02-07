@@ -8,6 +8,8 @@ static inline int hash_key(int i,int j,int B, int n) {
   return (1 + ((int)(n/B) + (n % (int)B == 0 ? 0 : 1)) * (int)((i-1)/B) + (int)((j-1)/B));
 }
 
+static int ZT[100][100][100];
+
 using namespace std;
 
 extern "C" {
@@ -142,6 +144,17 @@ int estimate_fill_csr (size_t m,
       }
     }
 
+    //printf("%d %d\n", i,j);
+
+
+    /*if (t == 4) {
+      for (int r = 1; r < W; r++) {
+        for (int c = 1; c < W; c++) {
+          printf("%d ", Z[r][c]);  
+        }
+        printf("\n");
+      }
+    }*/
     for (int r = 1; r < W; r++) {
       for (int c = 1; c < W; c++) {
         Z[r][c] += Z[r][c - 1];
@@ -153,15 +166,24 @@ int estimate_fill_csr (size_t m,
         Z[r][c] += Z[r - 1][c];
       }
     }
-
-    if(t==9)
-    {printf("after (%d,%d):\n", i, j);
-    for (int r = 1; r < W; r++) {
-      for (int c = 1; c < W; c++) {
-        printf("%d ", Z[r][c]);
+    /*if (t == 4) {
+      printf("========\n");
+      for (int r = 1; r < W; r++) {
+        for (int c = 1; c < W; c++) {
+          printf("%d ", Z[r][c]);  
+        }
+        printf("\n");
       }
-      printf("\n");
-    }}
+      printf("==========================================\n");
+    }*/
+   
+    /*{
+    for (int r = 1; r < W; r++) {
+        for (int c = 1; c < W; c++) {
+          ZT[t][r][c] = Z[r][c];  
+        }
+      }
+    }*/
 
     int fill_index = 0;
     for (int b_r = 1; b_r <= B; b_r++) {
@@ -173,7 +195,8 @@ int estimate_fill_csr (size_t m,
         int y_0 = Z[r_hi][c_hi] - Z[r_lo][c_hi] - Z[r_hi][c_lo] + Z[r_lo][c_lo];
         //printf("%d %d %d %d\n", Z[r_hi][c_hi], Z[r_lo][c_hi] , Z[r_hi][c_lo] , Z[r_lo][c_lo]);
         fill[fill_index] += 1.0/y_0;
-        fill_index++;
+        //printf("y_0 : %d (%d)\n", y_0, fill_index);
+  fill_index++;
       }
     }
   }
@@ -237,11 +260,11 @@ int estimate_fill_coo_2d (int m,
   sort_int(samples, s);
   unordered_map<int, vector<coo_2d_simplified>> mp;
   // put into hash map
-  for (int t = 0; t < s; t++) {
+  for (int t = 0; t < nnz; t++) {
 
-    int ind = samples[t];
-    int i = coo[ind].y;
-    int j = coo[ind].x;
+    //int ind = samples[t];
+    int i = coo[t].y;
+    int j = coo[t].x;
     coo_2d_simplified tmp;
     tmp.y = i;
     tmp.x = j;
@@ -264,7 +287,7 @@ int estimate_fill_coo_2d (int m,
   }
 
   int num_block_per_row = n/B + (n % B == 0 ? 0 : 1);
-  printf("%d\n", n);
+  
   for (int t = 0; t < s; t++) {
     int ind = samples[t];
     int i = coo[ind].y;
@@ -320,14 +343,14 @@ int estimate_fill_coo_2d (int m,
               //if(t==9) printf("+");
             //}
             //printf("%d %d (%d) / %d~%d, %d~%d ", vec[k].y, vec[k].x, b, i_start, i_end, j_start, j_end);
-            if(j_start < vec[k].x  && vec[k].x < j_end && i_start < vec[k].y && vec[k].y < i_end) {
+            if(j_start <= vec[k].x  && vec[k].x <= j_end && i_start <= vec[k].y && vec[k].y <= i_end) {
               // If an element in the block is inside I-B+1 ~ I + B -1, count it
               //printf("%d %d (%d~%d, %d~%d) => %d %d\n", vec[k].y, vec[k].x, i_start, i_end,j_start, j_end,vec[k].y-i_start, vec[k].x-j_start);fflush(stdout);
 
-              if(vec[k].y-i_start == 0 || vec[k].x-j_start == 0) {
+              /*if(vec[k].y-i_start == 0 || vec[k].x-j_start == 0) {
                 printf("Test\n");
-              }
-              Z[vec[k].y-i_start][vec[k].x-j_start] = 1;
+              }*/
+              if(vec[k].y-i_start > 0 && vec[k].x - j_start > 0) Z[vec[k].y-i_start][vec[k].x-j_start] = 1;
 
 
               //printf("%d %d (%d)\n", vec[k].y-i_start+1, vec[k].x-j_start+1, b);
@@ -343,27 +366,64 @@ int estimate_fill_coo_2d (int m,
     }
 
 
+    i--;j--; 
+
+    //printf("%d %d\n", i,j);
+    
+    /*if (t == 4) {
+       for (int r = 1; r < W; r++) {
+         for (int c = 1; c < W; c++) {
+           printf("%d ", Z[r][c]);  
+         }
+         printf("\n");
+       }
+     }*/
+
     for (int r = 1; r < W; r++) {
       for (int c = 1; c < W; c++) {
         Z[r][c] += Z[r][c - 1];
       }
     }
-
+    /*
+    if (t == 4) {
+      printf("========\n");
+      for (int r = 1; r < W; r++) {
+        for (int c = 1; c < W; c++) {
+          printf("%d ", Z[r][c]);  
+        }
+        printf("\n");
+      }
+      printf("==========================================\n");
+    }
+    */
     for (int r = 1; r < W; r++) {
       for (int c = 1; c < W; c++) {
         Z[r][c] += Z[r - 1][c];
       }
     }
-if(t==9)
-    {printf("after (%d,%d):\n", i, j);
-    for (int r = 1; r < W; r++) {
-      for (int c = 1; c < W; c++) {
-        printf("%d ", Z[r][c]);
+    /*
+    if (t == 4) {
+      printf("========\n");
+      for (int r = 1; r < W; r++) {
+        for (int c = 1; c < W; c++) {
+          printf("%d ", Z[r][c]);  
+        }
+        printf("\n");
       }
-      printf("\n");
-    }}
+      printf("==========================================\n");
+    }*/
+    
 
-    //i--;j--;
+    /*{
+    for (int r = 1; r < W; r++) {
+        for (int c = 1; c < W; c++) {
+          if(ZT[t][r][c] != Z[r][c]) {
+            printf("Z[r][c] different at r = %d c = %d on %d th sample\n", r, c, t);
+          }  
+        }
+      }
+    }*/
+    
 
     int fill_index = 0;
     for (int b_r = 1; b_r <= B; b_r++) {
@@ -373,7 +433,7 @@ if(t==9)
         int c_hi = B + b_c - 1 - (j % b_c);
         int c_lo = c_hi - b_c;
         int y_0 = Z[r_hi][c_hi] - Z[r_lo][c_hi] - Z[r_hi][c_lo] + Z[r_lo][c_lo];
-
+  //printf("y_0: %d (%d)\n", y_0, fill_index);
         fill[fill_index] += 1.0/y_0;
         fill_index++;
       }
