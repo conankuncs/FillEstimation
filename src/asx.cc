@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unordered_map>
+#include <sys/time.h>
 #include <vector>
 
 static inline int hash_key(int i,int j,int B, int n) {
@@ -16,6 +17,13 @@ extern "C" {
 
 char *name () {
   return (char *)"asx";
+}
+
+//Return time time of day as a double-precision floating point value.
+double wall_time_2 (void) {
+  struct timeval t;
+  gettimeofday(&t, NULL);
+  return 1.0*t.tv_sec + 1.0e-6*t.tv_usec;
 }
 
 #define REPLACEMENT
@@ -193,6 +201,8 @@ int estimate_fill_coo_2d (int m,
   double T = 2 * log(B/delta) * B * B / (epsilon * epsilon);
   int s;
 
+double time = -wall_time_2();
+
 #ifdef REPLACEMENT
   s = T;
 #else
@@ -221,9 +231,16 @@ int estimate_fill_coo_2d (int m,
   random_choose(samples, s, 0, nnz);
 #endif
   sort_int(samples, s);
+
+  time += wall_time_2();
+  printf("  \"time for random sampling\": %.*e,\n", DECIMAL_DIG, time);
+
   unordered_map<int, vector<coo_2d_simplified>> mp;
   
   // put all elements into hash map
+
+  time = -wall_time_2();
+
   for (int t = 0; t < nnz; t++) {
     int i = coo[t].y;
     int j = coo[t].x;
@@ -243,8 +260,12 @@ int estimate_fill_coo_2d (int m,
     }
   }
 
+  time += wall_time_2();
+  printf("  \"time for insert_hashmap\": %.*e,\n", DECIMAL_DIG, time);
+
   int num_block_per_row = n/B + (n % B == 0 ? 0 : 1);
   
+  time = -wall_time_2();
   for (int t = 0; t < s; t++) {
     int ind = samples[t];
     int i = coo[ind].y;
@@ -293,7 +314,6 @@ int estimate_fill_coo_2d (int m,
       
     }
 
-
     i--;j--; 
 
     for (int r = 1; r < W; r++) {
@@ -324,7 +344,11 @@ int estimate_fill_coo_2d (int m,
 
 
   }
+  time += wall_time_2();
+  printf("  \"time for sampling process\": %.*e,\n", DECIMAL_DIG, time);
 
+
+  time = -wall_time_2();
   int fill_index = 0;
   for (int b_r = 1; b_r <= B; b_r++) {
     for (int b_c = 1; b_c <= B; b_c++) {
@@ -332,6 +356,10 @@ int estimate_fill_coo_2d (int m,
       fill_index++;
     }
   }
+
+  time += wall_time_2();
+  printf("  \"time for fill calculation\": %.*e,\n", DECIMAL_DIG, time);
+
 
   free(samples);
   free(samples_i);
