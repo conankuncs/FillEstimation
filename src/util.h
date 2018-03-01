@@ -31,3 +31,7 @@ typedef struct coo_2d {
 typedef struct coo_2d_simplified {
   int x,y;
 } coo_2d_simplified;
+
+typedef struct coo_3d_simplified {
+	int x,y,z;
+} coo_3d_simplified;

@@ -5,8 +5,15 @@
 #include <sys/time.h>
 #include <vector>
 
+
+//2D hashkey function
 static inline int hash_key(int i,int j,int B, int n) {
   return (1 + ((int)(n/B) + (n % (int)B == 0 ? 0 : 1)) * (int)((i-1)/B) + (int)((j-1)/B));
+}
+
+//3D hashkey function
+static inline int hash_key(int i, int j, int k, int B, int x, int y) {
+  return (1 + ((int)(x/B) + (x % B == 0 ? 0 : 1))*((int)(y/B) + (y % B == 0 ? 0 : 1))*((int)((k-1)/B)) + ((int)(x/B) + (x % B == 0 ? 0 : 1))*((int)((j-1)/B)) + ((int)((i-1)/B)));
 }
 
 using namespace std;
@@ -213,8 +220,6 @@ double time = -wall_time_2();
 
   //Sample s items
   int *samples = (int*)malloc(s*sizeof(int));
-  int *samples_i = (int*)malloc(s*sizeof(int));
-  int *samples_j = (int*)malloc(s*sizeof(int));
 
 // Randomized Sampling
 #ifdef REPLACEMENT
@@ -362,9 +367,213 @@ double time = -wall_time_2();
 
 
   free(samples);
-  free(samples_i);
-  free(samples_j);
+  return 0;
+}
+
+int estimate_fill_coo_3d (int x,
+                   int y,
+                   int z,
+                   int nnz,
+                   vector<coo_3d_simplified> &coo,
+                   int B,
+                   double epsilon,
+                   double delta,
+                   double *fill,
+                   int verbose) {
+  int W = 2 * B;
+  int Z[W][W][W];
+
+  double T = 3 * log(B/delta) * B * B * B / (2 * epsilon * epsilon);
+  int s;
+
+double time = -wall_time_2();
+
+#ifdef REPLACEMENT
+  s = T;
+#else
+  //s = ((T - T/nnz) + sqrt((T - T / nnz) * (T - T / nnz)  + 4 * T * (1 + T / N)))/(2 + 2 * T / nnz);
+  s = ((T - T/nnz) + sqrt(T * (T + (2 * T + T / nnz) / nnz + 4)))/(2 + 2 * T / nnz);
+#endif
+  s = min(s, nnz);
+
+//Sample s items
+int *samples = (int*)malloc(s*sizeof(int));
+
+// Randomized Sampling
+#ifdef REPLACEMENT
+  if (s == nnz) {
+    for (int i = 0; i < nnz; i++) {
+      samples[i] = i;
+    }
+  } else {
+    for (int i = 0; i < s; i++) {
+      samples[i] = random_range(0, nnz);
+    }
+  }
+#else
+  random_choose(samples, s, 0, nnz);
+#endif
+  sort_int(samples, s);
+
+  time += wall_time_2();
+  printf("  \"time for random sampling\": %.*e,\n", DECIMAL_DIG, time);
+
+  unordered_map<int, vector<coo_3d_simplified>> mp;
+  
+  // put all elements into hash map
+
+  time = -wall_time_2();
+
+  for (int t = 0; t < nnz; t++) {
+    int i = coo[t].x;
+    int j = coo[t].y;
+    int k = coo[t].z;
+
+    int key = hash_key(i,j,k,B,x,y);
+    unordered_map<int, vector<coo_3d_simplified>>::iterator it = mp.find(key);
+    if(it == mp.end()) {
+      // if not exist, create new vector with this element.
+      vector<coo_3d_simplified> vec = {coo[t]};
+      mp.insert(make_pair(key, vec));
+    } else {
+      // put sample inside.
+      vector<coo_3d_simplified> &vec = it->second;
+      vec.push_back(coo[t]);
+    }
+  }
+
+  time += wall_time_2();
+  printf("  \"time for insert_hashmap\": %.*e,\n", DECIMAL_DIG, time);
+
+  int num_block_per_depth = (x/B + (x % B == 0 ? 0 : 1)) * (y/B + (y % B == 0 ? 0 : 1));
+  int num_block_per_row = x/B + (x % B == 0 ? 0 : 1);
+  
+  time = -wall_time_2();
+  for (int t = 0; t < s; t++) {
+    int ind = samples[t];
+    int i = coo[ind].x;
+    int j = coo[ind].y;
+    int k = coo[ind].z;
+
+    //compute x for some i, j
+    for (int d = 0; d < W; d++) {
+      for (int r = 0; r < W; r++) {
+        for (int c = 0; c < W; c++) {
+          Z[d][r][c] = 0;
+        }
+      }
+    }
+    
+    // nonzeroinrange
+
+    int i_start = i-B;
+    int i_end = i+B - 1;
+
+    int j_start = j-B;
+    int j_end = j+B-1;
+
+    int k_start = k-B;
+    int k_end = k+B-1;
+
+    int start_block = hash_key(i,j,k,B,x,y);
+    
+    for (int d = start_block-num_block_per_depth; d <= start_block + num_block_per_depth; d += num_block_per_depth) {
+      for (int r = d-num_block_per_row; r <= d + num_block_per_row; r += num_block_per_row) {
+        for (int c = r - 1; c <= r + 1; c++) {
+          int b = c; // block number
+          if(b <= 0) continue;
+
+          unordered_map<int, vector<coo_3d_simplified>>::iterator it = mp.find(b);
+
+          if(it != mp.end()) {
+
+            vector<coo_3d_simplified> &vec = it->second;
+
+            // iterate through all nnz element in the block if it falls in our range.
+            for(int l = 0; l < vec.size(); l++) {
+
+              
+              if(j_start <= vec[l].y  && vec[l].y <= j_end && i_start <= vec[l].x && vec[l].x <= i_end && k_start <=- vec[l].z && vec[l].z <= k_end) {
+                
+                if(vec[l].x-i_start > 0 && vec[l].y - j_start > 0 && vec[l].z - k_start > 0) Z[vec[k].z-k_start][vec[k].y-j_start][vec[k].x-i_start] = 1;
+
+              }
+
+            }
+          }
+        } 
+      }
+    }
+
+    i--;j--;k--;
+
+    for (int d = 1; d < W; d++) {
+      for (int r = 1; r < W; r++) {
+        for (int c = 1; c < W; c++) {
+          Z[d][r][c] += Z[d][r][c - 1];
+        }
+      }
+    }
+
+    for (int d = 1; d < W; d++) {
+      for (int r = 1; r < W; r++) {
+        for (int c = 1; c < W; c++) {
+          Z[d][r][c] += Z[d][r - 1][c];
+        }
+      }
+    }
+
+    for (int d = 1; d < W; d++) {
+      for (int r = 1; r < W; r++) {
+        for (int c = 1; c < W; c++) {
+          Z[d][r][c] += Z[d - 1][r][c];
+        }
+      }
+    }
+
+    int fill_index = 0;
+    for (int b_d = 1; b_d <= B; b_d++) {
+        int d_hi = B + b_d - 1 - (k % b_d);
+        int d_lo = d_hi - b_d;
+      for (int b_r = 1; b_r <= B; b_r++) {
+        int r_hi = B + b_r - 1 - (j % b_r);
+        int r_lo = r_hi - b_r;
+        for (int b_c = 1; b_c <= B; b_c++) {
+          int c_hi = B + b_c - 1 - (i % b_c);
+          int c_lo = c_hi - b_c;
+          int y_0 = Z[d_hi][r_hi][c_hi] - Z[d_hi][r_hi][c_lo] - Z[d_hi][r_lo][c_hi] - Z[d_lo][r_hi][c_hi] + Z[d_hi][r_lo][c_lo] + Z[d_lo][r_lo][c_hi] + Z[d_lo][r_hi][c_lo] - Z[d_lo][r_lo][c_lo];
+          fill[fill_index] += 1.0/y_0;
+          fill_index++;
+        }
+      }
+    }
+
+
+
+  }
+  time += wall_time_2();
+  printf("  \"time for sampling process\": %.*e,\n", DECIMAL_DIG, time);
+
+
+  time = -wall_time_2();
+  int fill_index = 0;
+  for (int b_d = 1; b_d <= B; b_d++) {
+    for (int b_r = 1; b_r <= B; b_r++) {
+      for (int b_c = 1; b_c <= B; b_c++) {
+        fill[fill_index] *= b_d * b_r * b_c / (double)s;
+        fill_index++;
+      }
+    }
+  }
+
+  time += wall_time_2();
+  printf("  \"time for fill calculation\": %.*e,\n", DECIMAL_DIG, time);
+
+
+  free(samples);
   return 0;
 }
 
 }
+
+
