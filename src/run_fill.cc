@@ -31,6 +31,19 @@ int test_csr (size_t m,
           int results,
           int verbose);
 int test_coo_2d (size_t m, size_t n, size_t nnz, vector<coo_2d> &coo, size_t B, double epsilon, double delta, int trials, int clock, int results,  int verbose);
+
+int test_coo_3d (int x,
+          int y,
+          int z,
+          int nnz,
+          vector<coo_3d_simplified> &coo,
+          int B,
+          double epsilon,
+          double delta,
+          int trials,
+          int clock,
+          int results,
+          int verbose);
 char *name ();
 
 static void usage () {
@@ -201,7 +214,7 @@ int main (int argc, char **argv) {
     return 1;
   }
 
-  FILE *f = fopen(argv[optind], "r");
+  /*FILE *f = fopen(argv[optind], "r");
   gsl_spmatrix *triples = gsl_spmatrix_fscanf(f);
   fclose(f);
   if (triples == 0) {
@@ -243,9 +256,36 @@ int main (int argc, char **argv) {
   fclose(f);
 
   ret = test_coo_2d(m, n, nnz, coo, B, epsilon, delta, trials, clock, results, verbose);
-
+  
   printf("}\n");
 
+  */
+
+
+  vector<coo_3d_simplified> coo;
+  // TODO: make it compatible with file that has initial annotation %
+  FILE *f = fopen(argv[optind], "r");
+  if(!f) {
+    printf("Error: Failed to read %s\n", argv[optind]);
+    return 1;
+  }
+  int x,y,z,nnz;
+  fscanf(f,"%d %d %d %d",&x,&y,&z,&nnz);
+  double val;
+
+  for(int i = 0; i < nnz; i++) {
+    coo_3d_simplified tmp={0};
+
+    fscanf(f,"%d %d %d",&tmp.x, &tmp.y, &tmp.z);
+    fscanf(f,"%lf\n",&val);
+    coo.push_back(tmp);
+  }
+  fclose(f);
+  
+  int ret = test_coo_3d(x, y, z, nnz, coo, B, epsilon, delta, trials, clock, results, verbose); 
+
+  printf("}\n");
   return ret;
 }
+
 }

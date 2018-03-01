@@ -482,8 +482,9 @@ int *samples = (int*)malloc(s*sizeof(int));
         for (int c = r - 1; c <= r + 1; c++) {
           int b = c; // block number
           if(b <= 0) continue;
-
+          
           unordered_map<int, vector<coo_3d_simplified>>::iterator it = mp.find(b);
+          
 
           if(it != mp.end()) {
 
@@ -495,8 +496,10 @@ int *samples = (int*)malloc(s*sizeof(int));
               
               if(j_start <= vec[l].y  && vec[l].y <= j_end && i_start <= vec[l].x && vec[l].x <= i_end && k_start <=- vec[l].z && vec[l].z <= k_end) {
                 
-                if(vec[l].x-i_start > 0 && vec[l].y - j_start > 0 && vec[l].z - k_start > 0) Z[vec[k].z-k_start][vec[k].y-j_start][vec[k].x-i_start] = 1;
-
+                if(vec[l].x-i_start > 0 && vec[l].y - j_start > 0 && vec[l].z - k_start > 0) {
+                  Z[vec[l].z-k_start][vec[l].y-j_start][vec[l].x-i_start] = 1;
+                  printf("test2\n");
+                }
               }
 
             }
@@ -504,7 +507,7 @@ int *samples = (int*)malloc(s*sizeof(int));
         } 
       }
     }
-
+    
     i--;j--;k--;
 
     for (int d = 1; d < W; d++) {
