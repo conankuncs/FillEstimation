@@ -434,6 +434,7 @@ int *samples = (int*)malloc(s*sizeof(int));
     if(it == mp.end()) {
       // if not exist, create new vector with this element.
       vector<coo_3d_simplified> vec = {coo[t]};
+      printf("%d %d %d\n", vec[0].x, vec[0].y, vec[0].z);
       mp.insert(make_pair(key, vec));
     } else {
       // put sample inside.
@@ -455,7 +456,6 @@ int *samples = (int*)malloc(s*sizeof(int));
     int j = coo[ind].y;
     int k = coo[ind].z;
 
-    //compute x for some i, j
     for (int d = 0; d < W; d++) {
       for (int r = 0; r < W; r++) {
         for (int c = 0; c < W; c++) {
@@ -494,11 +494,11 @@ int *samples = (int*)malloc(s*sizeof(int));
             for(int l = 0; l < vec.size(); l++) {
 
               
-              if(j_start <= vec[l].y  && vec[l].y <= j_end && i_start <= vec[l].x && vec[l].x <= i_end && k_start <=- vec[l].z && vec[l].z <= k_end) {
+              if(j_start <= vec[l].y  && vec[l].y <= j_end && i_start <= vec[l].x && vec[l].x <= i_end && k_start <= vec[l].z && vec[l].z <= k_end) {
                 
                 if(vec[l].x-i_start > 0 && vec[l].y - j_start > 0 && vec[l].z - k_start > 0) {
                   Z[vec[l].z-k_start][vec[l].y-j_start][vec[l].x-i_start] = 1;
-                  printf("test2\n");
+                  //printf("test2\n");
                 }
               }
 
@@ -545,6 +545,8 @@ int *samples = (int*)malloc(s*sizeof(int));
           int c_hi = B + b_c - 1 - (i % b_c);
           int c_lo = c_hi - b_c;
           int y_0 = Z[d_hi][r_hi][c_hi] - Z[d_hi][r_hi][c_lo] - Z[d_hi][r_lo][c_hi] - Z[d_lo][r_hi][c_hi] + Z[d_hi][r_lo][c_lo] + Z[d_lo][r_lo][c_hi] + Z[d_lo][r_hi][c_lo] - Z[d_lo][r_lo][c_lo];
+          //if(y_0 ==0) continue;
+          //printf("y_0 = %d / %d - %d - %d - %d + %d + %d + %d - %d\n", y_0, Z[d_hi][r_hi][c_hi], Z[d_hi][r_hi][c_lo], Z[d_hi][r_lo][c_hi],  Z[d_lo][r_hi][c_hi], Z[d_hi][r_lo][c_lo], Z[d_lo][r_lo][c_hi], Z[d_lo][r_hi][c_lo], Z[d_lo][r_lo][c_lo]);
           fill[fill_index] += 1.0/y_0;
           fill_index++;
         }

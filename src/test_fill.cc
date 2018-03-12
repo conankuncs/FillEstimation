@@ -199,7 +199,7 @@ int test_coo_3d (int x,
       for (int b_d = 1; b_d <= B; b_d++) {
         printf("      [\n");
         for (int b_r = 1; b_r <= B; b_r++) {
-          printf("        [\n");
+          printf("        [        ");
           for (int b_c = 1; b_c <= B; b_c++) {
             printf("%.*e%s", DECIMAL_DIG, fill[i], b_c <= B - 1 ? ", " : "");
             i++;
