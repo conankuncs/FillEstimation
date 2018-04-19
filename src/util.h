@@ -32,6 +32,12 @@ typedef struct coo_2d_simplified {
   int x,y;
 } coo_2d_simplified;
 
+typedef struct coo_2d_simplified_2_by_2 {
+	coo_2d_simplified arr[5];
+	int index;
+	int local_x, local_y;
+} coo_2d_simplified_2_by_2;
+
 typedef struct coo_3d_simplified {
 	int x,y,z;
 } coo_3d_simplified;
